@@ -10,23 +10,19 @@ DB_PATH = os.path.join(DB_DIR, "crypto_prices.db")
 def get_connection():
     """
     Establishes and returns a connection to the SQLite database.
-    SQLite stores database data in a single file specified by DB_PATH.
-    If the file does not exist, SQLite will automatically create it.
+    row_factory helps return rows as dictionary-like objects.
     """
-    # Check if the data directory exists, if not, create it
     if not os.path.exists(DB_DIR):
         os.makedirs(DB_DIR)
         print(f"[Database] Created directory: {DB_DIR}")
         
-    # Connect to the database. row_factory helps return rows as dictionary-like objects
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
     return conn
 
 def init_db():
     """
-    Creates the 'prices', 'tracked_coins', and 'subscribers' tables if they don't exist.
-    Seeds the 'tracked_coins' table with default crypto assets on first boot.
+    Creates the 'prices', 'tracked_coins', and 'subscriptions' tables if they don't exist.
     """
     create_prices_table = """
     CREATE TABLE IF NOT EXISTS prices (
@@ -47,10 +43,12 @@ def init_db():
     );
     """
     
-    create_subscribers_table = """
-    CREATE TABLE IF NOT EXISTS subscribers (
-        email TEXT PRIMARY KEY,
-        is_active INTEGER DEFAULT 1
+    # New Table: maps emails to specific coin alerts (Asset-Specific alerting)
+    create_subscriptions_table = """
+    CREATE TABLE IF NOT EXISTS subscriptions (
+        email TEXT,
+        coin_id TEXT,
+        PRIMARY KEY (email, coin_id)
     );
     """
     
@@ -58,28 +56,13 @@ def init_db():
     try:
         cursor = conn.cursor()
         
-        # 1. Create tables
+        # Create tables
         cursor.execute(create_prices_table)
         cursor.execute(create_tracked_coins_table)
-        cursor.execute(create_subscribers_table)
+        cursor.execute(create_subscriptions_table)
         conn.commit()
-        print("[Database] Initialized tables: prices, tracked_coins, subscribers.")
+        print("[Database] Initialized tables: prices, tracked_coins, subscriptions.")
         
-        # 2. Seed default coins if table is completely empty
-        cursor.execute("SELECT COUNT(*) FROM tracked_coins;")
-        if cursor.fetchone()[0] == 0:
-            default_coins = [
-                ("bitcoin", "BTC"),
-                ("ethereum", "ETH"),
-                ("solana", "SOL")
-            ]
-            cursor.executemany(
-                "INSERT INTO tracked_coins (coin_id, coin_symbol) VALUES (?, ?);",
-                default_coins
-            )
-            conn.commit()
-            print("[Database] Seeded default tracked coins (Bitcoin, Ethereum, Solana).")
-            
     except sqlite3.Error as e:
         print(f"[Database] Error initializing database: {e}")
     finally:
@@ -140,47 +123,119 @@ def get_tracked_coins():
     finally:
         conn.close()
 
-def subscribe_email(email):
+# --- Asset-Specific Subscriptions CRUD Helpers ---
+
+def subscribe_email_to_coin(email, coin_id, coin_symbol):
     """
-    Adds a new email subscriber to receive price anomaly notifications.
+    Subscribes an email to alerts for a specific cryptocurrency.
+    Automatically starts tracking the coin in the background if not already tracked.
     """
-    insert_query = "INSERT OR REPLACE INTO subscribers (email, is_active) VALUES (?, 1);"
+    email = email.lower().strip()
+    coin_id = coin_id.lower().strip()
+    coin_symbol = coin_symbol.upper().strip()
+    
     conn = get_connection()
     try:
         cursor = conn.cursor()
-        cursor.execute(insert_query, (email.lower(),))
+        
+        # 1. Map subscription
+        cursor.execute(
+            "INSERT OR REPLACE INTO subscriptions (email, coin_id) VALUES (?, ?);",
+            (email, coin_id)
+        )
+        
+        # 2. Add to active tracked list for background scheduling
+        cursor.execute(
+            "INSERT OR REPLACE INTO tracked_coins (coin_id, coin_symbol) VALUES (?, ?);",
+            (coin_id, coin_symbol)
+        )
+        
         conn.commit()
-        print(f"[Database] Subscribed email: {email.lower()}")
+        print(f"[Database] Subscribed {email} to {coin_id} alerts.")
         return True
     except sqlite3.Error as e:
-        print(f"[Database] Error subscribing email: {e}")
+        print(f"[Database] Error subscribing email to coin: {e}")
         return False
     finally:
         conn.close()
 
-def unsubscribe_email(email):
+def unsubscribe_email_from_coin(email, coin_id):
     """
-    Removes an email from receiving price anomaly notifications.
+    Unsubscribes an email from alerts for a specific cryptocurrency.
+    If no other active subscribers are left for this coin, automatically
+    removes it from the background tracking list to save system API calls.
     """
-    delete_query = "DELETE FROM subscribers WHERE email = ?;"
+    email = email.lower().strip()
+    coin_id = coin_id.lower().strip()
+    
     conn = get_connection()
     try:
         cursor = conn.cursor()
-        cursor.execute(delete_query, (email.lower(),))
+        
+        # 1. Delete subscription mapping
+        cursor.execute(
+            "DELETE FROM subscriptions WHERE email = ? AND coin_id = ?;",
+            (email, coin_id)
+        )
+        
+        # 2. Check if any subscribers remain for this coin
+        cursor.execute("SELECT COUNT(*) FROM subscriptions WHERE coin_id = ?;", (coin_id,))
+        remaining = cursor.fetchone()[0]
+        
+        # If no subscribers are left, purge it from tracked_coins
+        if remaining == 0:
+            cursor.execute("DELETE FROM tracked_coins WHERE coin_id = ?;", (coin_id,))
+            print(f"[Database] Stopped background tracking for {coin_id} (0 subscribers remaining).")
+            
         conn.commit()
-        print(f"[Database] Unsubscribed email: {email.lower()}")
+        print(f"[Database] Unsubscribed {email} from {coin_id} alerts.")
         return True
     except sqlite3.Error as e:
-        print(f"[Database] Error unsubscribing email: {e}")
+        print(f"[Database] Error unsubscribing email from coin: {e}")
         return False
+    finally:
+        conn.close()
+
+def get_subscribers_for_coin(coin_id):
+    """
+    Retrieves all emails subscribed to a specific coin.
+    """
+    coin_id = coin_id.lower().strip()
+    select_query = "SELECT email FROM subscriptions WHERE coin_id = ?;"
+    conn = get_connection()
+    try:
+        cursor = conn.cursor()
+        cursor.execute(select_query, (coin_id,))
+        rows = cursor.fetchall()
+        return [row['email'] for row in rows]
+    except sqlite3.Error as e:
+        print(f"[Database] Error fetching subscribers for {coin_id}: {e}")
+        return []
+    finally:
+        conn.close()
+
+def get_all_subscriptions():
+    """
+    Retrieves all subscriptions mapping.
+    """
+    select_query = "SELECT email, coin_id FROM subscriptions;"
+    conn = get_connection()
+    try:
+        cursor = conn.cursor()
+        cursor.execute(select_query)
+        rows = cursor.fetchall()
+        return [dict(row) for row in rows]
+    except sqlite3.Error as e:
+        print(f"[Database] Error fetching all subscriptions: {e}")
+        return []
     finally:
         conn.close()
 
 def get_active_subscribers():
     """
-    Retrieves a list of all active subscriber email addresses.
+    Retrieves a list of all unique active subscriber email addresses.
     """
-    select_query = "SELECT email FROM subscribers WHERE is_active = 1;"
+    select_query = "SELECT DISTINCT email FROM subscriptions;"
     conn = get_connection()
     try:
         cursor = conn.cursor()
@@ -292,6 +347,5 @@ def export_prices_to_json(limit=100):
 
 if __name__ == "__main__":
     init_db()
-    # Test queries
     print("Tracked Coins:", get_tracked_coins())
-    print("Active Subscribers:", get_active_subscribers())
+    print("All Subscriptions:", get_all_subscriptions())

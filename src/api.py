@@ -18,7 +18,7 @@ from main import run_pipeline
 app = FastAPI(
     title="Crypto Tracker REST API",
     description="Backend API serving live price history, dynamic explorer, and supporting alert configurations.",
-    version="2.1.0"
+    version="2.2.0"
 )
 
 # Enable CORS (Cross-Origin Resource Sharing)
@@ -42,7 +42,7 @@ chart_cache = {}  # Keys: (coin_id, days) -> {"data": data, "timestamp": timesta
 @app.get("/api/market")
 def get_market_data():
     """
-    Fetches the Top 100 cryptocurrencies by market cap with sparklines from CoinGecko.
+    Fetches the Top 250 cryptocurrencies by market cap with sparklines from CoinGecko.
     Utilizes an in-memory cache to prevent throttling. Caches data for 2 minutes.
     """
     current_time = time.time()
@@ -53,10 +53,11 @@ def get_market_data():
         return market_cache["data"]
         
     url = "https://api.coingecko.com/api/v3/coins/markets"
+    # per_page: increased from 100 to 250 to allow searching wider selection of coins
     params = {
         "vs_currency": "usd",
         "order": "market_cap_desc",
-        "per_page": 100,
+        "per_page": 250,
         "page": 1,
         "sparkline": "true"
     }
@@ -84,7 +85,7 @@ def get_market_data():
         # Store in cache
         market_cache["data"] = data
         market_cache["timestamp"] = current_time
-        print("[API] Successfully fetched fresh market list from CoinGecko.")
+        print("[API] Successfully fetched fresh market list (Top 250) from CoinGecko.")
         return data
         
     except requests.exceptions.RequestException as e:
@@ -245,48 +246,74 @@ def delete_coin(coin_id: str):
         )
     return {"message": f"Successfully stopped tracking coin: {coin_id}"}
 
-# 4. API Endpoints: Email Subscribers
+# 4. API Endpoints: Email Subscribers & Asset Mappings
+
 @app.get("/api/subscribers")
 def list_subscribers():
     """
-    Lists all email addresses currently subscribed to anomaly notifications.
+    Lists all unique subscriber email addresses registered in the system.
     """
     return database.get_active_subscribers()
 
-@app.post("/api/subscribers")
-def subscribe(payload: dict):
+@app.get("/api/subscribers/{coin_id}")
+def list_subscribers_for_coin(coin_id: str):
     """
-    Subscribes a new email address. Expects payload: {"email": "user@domain.com"}
+    Lists email addresses subscribed to alerts for a specific cryptocurrency.
+    """
+    return database.get_subscribers_for_coin(coin_id.lower().strip())
+
+@app.post("/api/subscribers")
+def subscribe_to_coin(payload: dict):
+    """
+    Subscribes a user's email to alerts for a specific coin.
+    Expects payload: {"email": "user@domain.com", "coin_id": "bitcoin", "coin_symbol": "BTC"}
     """
     email = payload.get("email")
+    coin_id = payload.get("coin_id")
+    coin_symbol = payload.get("coin_symbol")
+    
     if not email or "@" not in email:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Valid 'email' address is required."
         )
+    if not coin_id or not coin_symbol:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="'coin_id' and 'coin_symbol' parameters are required."
+        )
         
     email = email.strip().lower()
-    success = database.subscribe_email(email)
+    coin_id = coin_id.strip().lower()
+    coin_symbol = coin_symbol.strip().upper()
+    
+    success = database.subscribe_email_to_coin(email, coin_id, coin_symbol)
     if not success:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Database subscription write failed."
         )
-    return {"message": f"Successfully subscribed: {email}"}
+        
+    # Trigger an immediate pipeline run in a separate thread so prices ingest instantly
+    threading.Thread(target=run_pipeline, daemon=True).start()
+    
+    return {"message": f"Successfully subscribed {email} to {coin_id} alerts."}
 
-@app.delete("/api/subscribers/{email}")
-def unsubscribe(email: str):
+@app.delete("/api/subscribers/{coin_id}/{email}")
+def unsubscribe_from_coin(coin_id: str, email: str):
     """
-    Unsubscribes an email address from alerts.
+    Unsubscribes an email address from alerts for a specific cryptocurrency.
     """
     email = email.strip().lower()
-    success = database.unsubscribe_email(email)
+    coin_id = coin_id.strip().lower()
+    
+    success = database.unsubscribe_email_from_coin(email, coin_id)
     if not success:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Database deletion failed."
+            detail="Database subscription deletion failed."
         )
-    return {"message": f"Successfully unsubscribed: {email}"}
+    return {"message": f"Successfully unsubscribed {email} from {coin_id} alerts."}
 
 # 5. Background Scheduler Daemon Setup
 def run_scheduler_loop():
@@ -301,9 +328,12 @@ def run_scheduler_loop():
     print("[Server] Launching initial pipeline execution cycle...")
     run_pipeline()
     
+    # Read monitoring cycle gap dynamically from environmental configuration (in minutes)
+    cycle_minutes = int(os.getenv("MONITOR_CYCLE_MINUTES", 5))
+    
     import schedule
-    schedule.every(5).minutes.do(run_pipeline)
-    print("[Server] Automated background pipeline scheduler active (every 5 minutes).")
+    schedule.every(cycle_minutes).minutes.do(run_pipeline)
+    print(f"[Server] Automated background pipeline scheduler active (every {cycle_minutes} minutes).")
     
     while True:
         schedule.run_pending()

@@ -3,7 +3,7 @@ import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from dotenv import load_dotenv
-from database import get_active_subscribers
+from database import get_subscribers_for_coin
 
 # Load environment configurations
 load_dotenv()
@@ -17,18 +17,18 @@ SENDER_PASSWORD = os.getenv("SENDER_PASSWORD")
 
 def send_alert(coin_id, price_usd, anomaly_type, percent_deviation):
     """
-    Retrieves active subscribers from the database and notifies them of price anomalies.
+    Retrieves active subscribers mapped specifically to this coin and notifies them of price anomalies.
     Dispatches via secure SMTP mail if enabled, or fallback logs to console.
     """
-    subscribers = get_active_subscribers()
+    subscribers = get_subscribers_for_coin(coin_id)
     
     # 1. Fallback to Console Alert if no subscribers or email disabled
     if not subscribers:
-        print(f"[ALERT] No active email subscribers registered in the database.")
+        print(f"[ALERT] No active email subscribers registered for {coin_id.upper()} alerts.")
         print(f"[ALERT] {coin_id.upper()} {anomaly_type.upper()}! Price: ${price_usd:,.2f} (Dev: {percent_deviation:+.2f}%)")
         return
         
-    print(f"[Notifier] Preparing alerts for {len(subscribers)} subscribers...")
+    print(f"[Notifier] Preparing alerts for {len(subscribers)} subscribers watching {coin_id.upper()}...")
     
     # Create email content (Subject has emoji, body has details)
     # Note: Terminal prints do not include emoji to prevent Windows terminal encoding crashes.
@@ -55,7 +55,7 @@ def send_alert(coin_id, price_usd, anomaly_type, percent_deviation):
         if missing_secrets and ENABLE_EMAIL:
             print("[Notifier] WARNING: Email enabled but credentials (SENDER_EMAIL/PASSWORD) are missing in .env.")
             
-        print(f"[ALERT] [EMAIL FALLBACK] Sending anomaly log notification to:")
+        print(f"[ALERT] [EMAIL FALLBACK] Sending anomaly log notification to {coin_id.upper()} watchers:")
         for email in subscribers:
             print(f"  - To: {email}")
         print(f"  - Subject: {subject}")
@@ -78,7 +78,7 @@ def send_alert(coin_id, price_usd, anomaly_type, percent_deviation):
             msg.attach(MIMEText(body, "plain"))
             
             server.sendmail(SENDER_EMAIL, email, msg.as_string())
-            print(f"[Notifier] Email successfully sent to {email}")
+            print(f"[Notifier] Email successfully sent to {email} for {coin_id.upper()}")
             
         server.quit()
         
@@ -88,7 +88,7 @@ def send_alert(coin_id, price_usd, anomaly_type, percent_deviation):
 if __name__ == "__main__":
     print("[Notifier] Testing dynamic alert dispatcher...")
     # Initialize database tables and add subscriber if running standalone
-    from database import init_db, subscribe_email
+    from database import init_db, subscribe_email_to_coin
     init_db()
-    subscribe_email("test_candidate@gmail.com")
+    subscribe_email_to_coin("test_candidate@gmail.com", "bitcoin", "BTC")
     send_alert("bitcoin", 68500.0, "spike", 3.4)

@@ -44,7 +44,7 @@
                 <!-- Explorer Table -->
                 <section class="explorer-section glass-panel">
                     <div class="explorer-header">
-                        <h2>Cryptocurrency Market (Top 100)</h2>
+                        <h2>Cryptocurrency Market (Top 250)</h2>
                         <span class="explorer-hint">Click on any cryptocurrency to view charts and statistics.</span>
                     </div>
                     <div class="table-scroll">
@@ -130,6 +130,24 @@
                                 </div>
                             </div>
                         </div>
+
+                        <!-- Asset-Specific Subscription Form -->
+                        <div class="coin-stats-card glass-panel">
+                            <h3>Coin Email Alerts</h3>
+                            <p class="card-desc">Subscribe to receive email alerts when this specific asset experiences volatility anomalies.</p>
+                            <form id="subscribe-coin-form" class="admin-form">
+                                <input type="email" id="subscriber-coin-email" placeholder="your.name@gmail.com" required autocomplete="off">
+                                <div class="btn-group">
+                                    <button type="submit" class="admin-btn success-btn">Subscribe</button>
+                                    <button type="button" id="unsubscribe-coin-btn" class="admin-btn danger-btn">Unsubscribe</button>
+                                </div>
+                            </form>
+                            <div class="active-list-container" style="max-height: 90px; margin-top: 10px;">
+                                <ul id="coin-subscribers-list" class="admin-list" style="font-size: 12px;">
+                                    <li>Loading subscribers...</li>
+                                </ul>
+                            </div>
+                        </div>
                     </div>
 
                     <!-- Right Side: Main Chart Area -->
@@ -152,33 +170,14 @@
             <!-- Pipeline Alert Control Center (Always Visible) -->
             <section class="alert-center-grid">
                 
-                <!-- Watchlist Monitor Directory -->
-                <div class="glass-panel alert-card">
-                    <div class="card-header-icon">🚨</div>
-                    <h2>Alert Watchlist Monitor</h2>
-                    <p class="card-desc">Active coins being actively monitored by our backend pipeline for volatility anomalies.</p>
-                    <div class="active-list-container">
-                        <ul id="active-watchlist-list" class="admin-list">
-                            <li>Loading alert watchlist...</li>
-                        </ul>
-                    </div>
-                </div>
-
-                <!-- Mailing List subscriptions -->
+                <!-- Registered Emails Directory -->
                 <div class="glass-panel alert-card">
                     <div class="card-header-icon">📧</div>
-                    <h2>Alert Notification List</h2>
-                    <p class="card-desc">Subscribed emails will receive TLS-secured SMTP alerts when watchlist assets flag anomalies.</p>
-                    <form id="subscribe-form" class="admin-form">
-                        <input type="email" id="subscriber-email" placeholder="your.name@gmail.com" required autocomplete="off">
-                        <div class="btn-group">
-                            <button type="submit" class="admin-btn success-btn">Subscribe</button>
-                            <button type="button" id="unsubscribe-btn" class="admin-btn danger-btn">Unsubscribe</button>
-                        </div>
-                    </form>
-                    <div class="active-list-container">
+                    <h2>Active Subscribers Directory</h2>
+                    <p class="card-desc">Summary list of all active email addresses receiving price volatility notifications in the system.</p>
+                    <div class="active-list-container" style="max-height: 232px;">
                         <ul id="subscribers-list" class="admin-list">
-                            <li>Loading mailing list...</li>
+                            <li>Loading subscribers directory...</li>
                         </ul>
                     </div>
                 </div>

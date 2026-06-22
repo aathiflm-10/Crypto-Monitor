@@ -2,7 +2,7 @@
 let currentView = 'explorer'; // 'explorer' | 'detail'
 let selectedCoinId = 'bitcoin';
 let chartDays = 7;
-let marketCoins = []; // Stores the top 100 coins
+let marketCoins = []; // Stores the top 250 coins
 let watchlistIds = []; // Active watchlist coin IDs from database
 let mainChart = null; // Chart.js instance for detailed view
 let sparklineCharts = []; // Array of active sparkline Chart instances
@@ -15,10 +15,7 @@ const explorerView = document.getElementById('explorer-view');
 const detailView = document.getElementById('detail-view');
 const searchInput = document.getElementById('search-input');
 const marketTableBody = document.getElementById('market-table-body');
-const activeWatchlistList = document.getElementById('active-watchlist-list');
 const subscribersList = document.getElementById('subscribers-list');
-const subscribeForm = document.getElementById('subscribe-form');
-const unsubscribeBtn = document.getElementById('unsubscribe-btn');
 
 // Detail Page Elements
 const detailCoinImage = document.getElementById('detail-coin-image');
@@ -28,6 +25,12 @@ const detailCoinPrice = document.getElementById('detail-coin-price');
 const detailCoinPct = document.getElementById('detail-coin-pct');
 const watchlistToggleBtn = document.getElementById('watchlist-toggle-btn');
 const backBtn = document.getElementById('back-btn');
+
+// Detail Subscription Elements
+const subscribeCoinForm = document.getElementById('subscribe-coin-form');
+const subscriberCoinEmail = document.getElementById('subscriber-coin-email');
+const unsubscribeCoinBtn = document.getElementById('unsubscribe-coin-btn');
+const coinSubscribersList = document.getElementById('coin-subscribers-list');
 
 // Stats Elements
 const statMarketCap = document.getElementById('stat-market-cap');
@@ -59,9 +62,9 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     });
     
-    // Setup Mailing List Forms
-    subscribeForm.addEventListener('submit', handleSubscribe);
-    unsubscribeBtn.addEventListener('click', handleUnsubscribe);
+    // Setup Coin-Specific Email Alert Listeners
+    subscribeCoinForm.addEventListener('submit', handleSubscribeCoin);
+    unsubscribeCoinBtn.addEventListener('click', handleUnsubscribeCoin);
     
     // Set auto refresh intervals (2 minutes for market, 30 seconds for watchlist status/subscribers/logs)
     setInterval(loadMarketDataOnly, 120000);
@@ -72,22 +75,22 @@ document.addEventListener("DOMContentLoaded", () => {
 async function loadInitialData() {
     await fetchWatchlist();
     await loadMarketDataOnly();
-    await loadSubscribers();
+    await loadGlobalSubscribers();
     await fetchWatchlistLogs();
 }
 
 // Background poller updates
 async function refreshActivePanelDetails() {
     await fetchWatchlist();
-    await loadSubscribers();
+    await loadGlobalSubscribers();
     await fetchWatchlistLogs();
     if (currentView === 'detail' && selectedCoinId) {
-        // Soft refresh of the details/chart
+        // Soft refresh of the details/chart/subscribers
         loadDetailDataOnly();
     }
 }
 
-// 2. Fetch Market Explorer list
+// 2. Fetch Market Explorer list (Top 250)
 async function loadMarketDataOnly() {
     try {
         const response = await fetch(`${API_BASE}/api/market`);
@@ -140,15 +143,13 @@ function renderMarketTable(coins) {
     // Attach click listeners to rows to navigate to details
     marketTableBody.querySelectorAll('tr').forEach(row => {
         row.addEventListener('click', (e) => {
-            // Prevent navigating if user clicks directly on sparkline canvas
             if (e.target.tagName.toLowerCase() === 'canvas') return;
-            
             const coinId = row.dataset.id;
             showDetailView(coinId);
         });
     });
     
-    // Render sparklines on-the-fly
+    // Render sparklines
     coins.forEach(coin => {
         const canvas = document.getElementById(`spark-${coin.id}`);
         if (canvas && coin.sparkline_in_7d && coin.sparkline_in_7d.price) {
@@ -162,7 +163,7 @@ function renderSparkline(canvas, prices, priceChange24h) {
     const ctx = canvas.getContext('2d');
     const color = priceChange24h >= 0 ? '#3fb950' : '#f85149';
     
-    // Downsample prices array if it's too dense (CoinGecko returns ~168 points, we only need ~30 for sparkline)
+    // Downsample prices array if it's too dense (reduce to 30 points)
     const step = Math.ceil(prices.length / 30);
     const sampledPrices = prices.filter((_, idx) => idx % step === 0);
     
@@ -222,13 +223,11 @@ function showExplorerView() {
     detailView.style.display = 'none';
     explorerView.style.display = 'block';
     
-    // Destroy main chart to free memory
     if (mainChart) {
         mainChart.destroy();
         mainChart = null;
     }
     
-    // Re-render market list to redraw sparklines
     renderMarketTable(marketCoins);
 }
 
@@ -237,6 +236,9 @@ async function showDetailView(coinId) {
     selectedCoinId = coinId;
     explorerView.style.display = 'none';
     detailView.style.display = 'block';
+    
+    // Reset subscription form
+    subscriberCoinEmail.value = '';
     
     // Load detail info and chart
     loadDetailDataOnly();
@@ -267,6 +269,9 @@ async function loadDetailDataOnly() {
     // Sync Watchlist Button Active Class
     syncWatchlistButtonUI();
     
+    // Fetch coin-specific subscribers list
+    loadCoinSubscribers(selectedCoinId);
+    
     // Load historical chart data
     loadDetailChart();
 }
@@ -290,7 +295,7 @@ async function loadDetailChart() {
     try {
         const response = await fetch(`${API_BASE}/api/market/chart/${selectedCoinId}?days=${chartDays}`);
         if (!response.ok) throw new Error("Failed to fetch historical chart data.");
-        const chartData = await response.json(); // Array of {time: epoch_ms, price: val}
+        const chartData = await response.json();
         
         renderMainChart(chartData);
     } catch (error) {
@@ -371,33 +376,9 @@ async function fetchWatchlist() {
         const watchlist = await response.json(); // Array of {coin_id, coin_symbol}
         
         watchlistIds = watchlist.map(item => item.coin_id);
-        
-        renderWatchlistUI(watchlist);
     } catch (error) {
         console.error("[App] Error loading watchlist:", error);
     }
-}
-
-function renderWatchlistUI(watchlist) {
-    if (watchlist.length === 0) {
-        activeWatchlistList.innerHTML = `<li>No monitored assets. Open a coin details to add.</li>`;
-        return;
-    }
-    
-    activeWatchlistList.innerHTML = watchlist.map(coin => `
-        <li>
-            <span>🔔 <strong>${coin.coin_symbol}</strong> (${coin.coin_id})</span>
-            <button class="delete-btn" data-coin="${coin.coin_id}" title="Remove from alerts">🗑️</button>
-        </li>
-    `).join('');
-    
-    // Attach listener for delete bin
-    activeWatchlistList.querySelectorAll('.delete-btn').forEach(btn => {
-        btn.addEventListener('click', (e) => {
-            const coinId = e.currentTarget.dataset.coin;
-            removeWatchlistCoin(coinId);
-        });
-    });
 }
 
 async function toggleWatchlistStatus() {
@@ -448,89 +429,111 @@ async function removeWatchlistCoin(coinId) {
     }
 }
 
-// 6. Alert Directory subscriptions
-async function loadSubscribers() {
+// 6. Coin-Specific Subscriptions Management
+async function loadCoinSubscribers(coinId) {
     try {
-        const response = await fetch(`${API_BASE}/api/subscribers`);
-        if (!response.ok) throw new Error("Failed to load subscriber list.");
-        const subscribers = await response.json();
+        const response = await fetch(`${API_BASE}/api/subscribers/${coinId}`);
+        if (!response.ok) throw new Error("Failed to load coin subscribers.");
+        const subscribers = await response.json(); // Array of strings
         
-        renderSubscribersList(subscribers);
+        if (subscribers.length === 0) {
+            coinSubscribersList.innerHTML = `<li>No email alerts active for this asset.</li>`;
+            return;
+        }
+        
+        coinSubscribersList.innerHTML = subscribers.map(email => `
+            <li>
+                <span>📧 ${email}</span>
+            </li>
+        `).join('');
     } catch (error) {
-        console.error("[App] Error loading subscribers:", error);
+        console.error(`[App] Error loading subscribers for ${coinId}:`, error);
+        coinSubscribersList.innerHTML = `<li>Error loading subscribers.</li>`;
     }
 }
 
-function renderSubscribersList(subscribers) {
-    if (subscribers.length === 0) {
-        subscribersListEl = document.getElementById('subscribers-list');
-        subscribersListEl.innerHTML = `<li>No active alert emails.</li>`;
-        return;
-    }
-    
-    const container = document.getElementById('subscribers-list');
-    container.innerHTML = subscribers.map(email => `
-        <li>
-            <span>📧 ${email}</span>
-        </li>
-    `).join('');
-}
-
-async function handleSubscribe(e) {
+async function handleSubscribeCoin(e) {
     e.preventDefault();
-    const emailInput = document.getElementById('subscriber-email');
-    const email = emailInput.value.trim().toLowerCase();
-    
+    const email = subscriberCoinEmail.value.trim().toLowerCase();
     if (!email) return;
+    
+    const coinObj = marketCoins.find(c => c.id === selectedCoinId);
+    const symbol = coinObj ? coinObj.symbol : selectedCoinId;
     
     try {
         const response = await fetch(`${API_BASE}/api/subscribers`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email })
+            body: JSON.stringify({ email, coin_id: selectedCoinId, coin_symbol: symbol })
         });
         
         const data = await response.json();
         if (!response.ok) throw new Error(data.detail || "Failed to subscribe.");
         
-        emailInput.value = '';
-        await loadSubscribers();
-        alert(`Subscribed successfully: ${email}`);
+        subscriberCoinEmail.value = '';
+        await loadCoinSubscribers(selectedCoinId);
+        await fetchWatchlist(); // Sync watchlist as DB auto-adds coin
+        await loadGlobalSubscribers();
+        await fetchWatchlistLogs();
+        alert(`Subscribed successfully to ${selectedCoinId.toUpperCase()} alerts: ${email}`);
     } catch (error) {
         alert(`Error subscribing: ${error.message}`);
     }
 }
 
-async function handleUnsubscribe() {
-    const emailInput = document.getElementById('subscriber-email');
-    const email = emailInput.value.trim().toLowerCase();
-    
+async function handleUnsubscribeCoin() {
+    const email = subscriberCoinEmail.value.trim().toLowerCase();
     if (!email) {
-        alert("Please enter your email address to unsubscribe.");
+        alert("Please type your email address first.");
         return;
     }
     
     try {
-        const response = await fetch(`${API_BASE}/api/subscribers/${email}`, {
+        const response = await fetch(`${API_BASE}/api/subscribers/${selectedCoinId}/${email}`, {
             method: 'DELETE'
         });
         
         const data = await response.json();
         if (!response.ok) throw new Error(data.detail || "Failed to unsubscribe.");
         
-        emailInput.value = '';
-        await loadSubscribers();
-        alert(`Unsubscribed successfully: ${email}`);
+        subscriberCoinEmail.value = '';
+        await loadCoinSubscribers(selectedCoinId);
+        await fetchWatchlist(); // Sync watchlist as DB auto-purges if empty
+        await loadGlobalSubscribers();
+        await fetchWatchlistLogs();
+        alert(`Unsubscribed successfully from ${selectedCoinId.toUpperCase()} alerts: ${email}`);
     } catch (error) {
         alert(`Error unsubscribing: ${error.message}`);
     }
 }
 
-// 7. Watchlist Pipeline anomaly log logs fetching
+// 7. Global Subscribers List (Bottom Summary Panel)
+async function loadGlobalSubscribers() {
+    try {
+        const response = await fetch(`${API_BASE}/api/subscribers`);
+        if (!response.ok) throw new Error("Failed to load subscriber list.");
+        const subscribers = await response.json();
+        
+        if (subscribers.length === 0) {
+            subscribersList.innerHTML = `<li>No active system subscribers.</li>`;
+            return;
+        }
+        
+        subscribersList.innerHTML = subscribers.map(email => `
+            <li>
+                <span>📧 ${email}</span>
+            </li>
+        `).join('');
+    } catch (error) {
+        console.error("[App] Error loading global subscribers:", error);
+    }
+}
+
+// 8. Watchlist Pipeline anomaly log logs fetching
 async function fetchWatchlistLogs() {
     const tbody = document.getElementById('logs-table-body');
     if (watchlistIds.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="5" class="no-data">No assets on alert watchlist. Add assets from their details page to run checks.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="5" class="no-data">No assets on alert watchlist. Subscribe to alert emails or add assets manually to trigger tracking.</td></tr>`;
         return;
     }
     
@@ -589,7 +592,7 @@ async function fetchWatchlistLogs() {
     }
 }
 
-// 8. Dynamic Formatting Helpers
+// 9. Dynamic Formatting Helpers
 function formatCurrency(value) {
     return new Intl.NumberFormat('en-US', {
         style: 'currency',

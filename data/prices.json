@@ -89,6 +89,42 @@
             "symbol": "BTC",
             "price": 63908.0,
             "is_anomaly": 0
+        },
+        {
+            "timestamp": "2026-06-22 07:03:06",
+            "symbol": "BTC",
+            "price": 63922.0,
+            "is_anomaly": 0
+        },
+        {
+            "timestamp": "2026-06-22 07:08:08",
+            "symbol": "BTC",
+            "price": 64036.0,
+            "is_anomaly": 0
+        },
+        {
+            "timestamp": "2026-06-22 07:17:00",
+            "symbol": "BTC",
+            "price": 64169.0,
+            "is_anomaly": 0
+        },
+        {
+            "timestamp": "2026-06-22 07:22:01",
+            "symbol": "BTC",
+            "price": 64168.0,
+            "is_anomaly": 0
+        },
+        {
+            "timestamp": "2026-06-22 07:22:54",
+            "symbol": "BTC",
+            "price": 64168.0,
+            "is_anomaly": 0
+        },
+        {
+            "timestamp": "2026-06-22 07:27:02",
+            "symbol": "BTC",
+            "price": 64188.0,
+            "is_anomaly": 0
         }
     ],
     "ethereum": [
@@ -168,6 +204,18 @@
             "timestamp": "2026-06-22 06:52:28",
             "symbol": "ETH",
             "price": 1732.23,
+            "is_anomaly": 0
+        },
+        {
+            "timestamp": "2026-06-22 07:22:54",
+            "symbol": "ETH",
+            "price": 1743.61,
+            "is_anomaly": 0
+        },
+        {
+            "timestamp": "2026-06-22 07:27:02",
+            "symbol": "ETH",
+            "price": 1744.48,
             "is_anomaly": 0
         }
     ],
