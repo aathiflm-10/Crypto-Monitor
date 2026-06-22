@@ -3,9 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Crypto Price Tracker Pipeline Dashboard</title>
+    <title>Crypto Price Tracker & Anomaly Detector</title>
     <!-- Google Font for sleek, premium typography -->
-    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <!-- Chart.js CDN for interactive graphs -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link rel="stylesheet" href="style.css">
@@ -17,8 +17,8 @@
             <div class="header-left">
                 <div class="logo-icon">📊</div>
                 <div>
-                    <h1>Crypto Pipeline Dashboard</h1>
-                    <p class="subtitle">Real-time Data Engineering Monitor</p>
+                    <h1>Crypto Monitor</h1>
+                    <p class="subtitle">Real-time Explorer & Anomaly Detection Pipeline</p>
                 </div>
             </div>
             <!-- Pipeline status indicator -->
@@ -28,44 +28,147 @@
             </div>
         </header>
 
-        <!-- Main Dashboard Metrics -->
-        <main class="dashboard-grid">
+        <!-- Main Content Area -->
+        <main class="main-layout">
             
-            <!-- Left Side Controls Panel -->
-            <div class="sidebar-container">
-                
-                <!-- Selection Controls -->
-                <section class="controls-card glass-panel">
-                    <h2>Tracked Assets</h2>
-                    <p class="card-desc">Select a cryptocurrency to view its historical trend and details.</p>
-                    <div class="coin-selector-buttons" id="coin-selector">
-                        <!-- Dynamically generated buttons -->
-                        <div class="no-data">Loading selector...</div>
+            <!-- VIEW 1: Market Explorer (Default) -->
+            <div id="explorer-view" class="view-panel">
+                <!-- Search and Stats bar -->
+                <div class="explorer-bar">
+                    <div class="search-container">
+                        <span class="search-icon">🔍</span>
+                        <input type="text" id="search-input" placeholder="Search by name or symbol (e.g. BTC, Cardano)..." autocomplete="off">
+                    </div>
+                </div>
+
+                <!-- Explorer Table -->
+                <section class="explorer-section glass-panel">
+                    <div class="explorer-header">
+                        <h2>Cryptocurrency Market (Top 100)</h2>
+                        <span class="explorer-hint">Click on any cryptocurrency to view charts and statistics.</span>
+                    </div>
+                    <div class="table-scroll">
+                        <table class="market-table">
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>Name</th>
+                                    <th>Price (USD)</th>
+                                    <th>24h %</th>
+                                    <th>Market Cap</th>
+                                    <th>Volume (24h)</th>
+                                    <th>Circulating Supply</th>
+                                    <th class="sparkline-col">Last 7 Days</th>
+                                </tr>
+                            </thead>
+                            <tbody id="market-table-body">
+                                <tr>
+                                    <td colspan="8" class="no-data">Loading market explorer...</td>
+                                </tr>
+                            </tbody>
+                        </table>
                     </div>
                 </section>
+            </div>
+
+            <!-- VIEW 2: Coin Detail Analytics (Hidden by default) -->
+            <div id="detail-view" class="view-panel" style="display: none;">
+                <!-- Detail Header -->
+                <div class="detail-header-bar">
+                    <button id="back-btn" class="nav-btn">← Back to Explorer</button>
+                    <div class="detail-actions">
+                        <button id="watchlist-toggle-btn" class="watchlist-btn">
+                            <span class="watchlist-icon">🚨</span> Add to Alert Watchlist
+                        </button>
+                    </div>
+                </div>
+
+                <div class="detail-grid">
+                    <!-- Left Side: Detail Metrics & Statistics -->
+                    <div class="detail-info-pane">
+                        <div class="coin-ident-card glass-panel">
+                            <div class="coin-brand-header">
+                                <img id="detail-coin-image" src="" alt="" class="coin-large-logo">
+                                <div>
+                                    <h2 id="detail-coin-name">Bitcoin</h2>
+                                    <span id="detail-coin-symbol" class="coin-symbol-badge">BTC</span>
+                                </div>
+                            </div>
+                            <div class="detail-price-row">
+                                <div id="detail-coin-price" class="detail-price-val">$0.00</div>
+                                <div id="detail-coin-pct" class="detail-pct-badge">+0.00%</div>
+                            </div>
+                        </div>
+
+                        <!-- Statistics Grid -->
+                        <div class="coin-stats-card glass-panel">
+                            <h3>Market Statistics</h3>
+                            <div class="stats-list">
+                                <div class="stats-item">
+                                    <span class="stats-label">Market Cap</span>
+                                    <span id="stat-market-cap" class="stats-value">$0.00</span>
+                                </div>
+                                <div class="stats-item">
+                                    <span class="stats-label">Volume (24h)</span>
+                                    <span id="stat-volume" class="stats-value">$0.00</span>
+                                </div>
+                                <div class="stats-item">
+                                    <span class="stats-label">24h High</span>
+                                    <span id="stat-high" class="stats-value success-text">$0.00</span>
+                                </div>
+                                <div class="stats-item">
+                                    <span class="stats-label">24h Low</span>
+                                    <span id="stat-low" class="stats-value danger-text">$0.00</span>
+                                </div>
+                                <div class="stats-item">
+                                    <span class="stats-label">Circulating Supply</span>
+                                    <span id="stat-supply" class="stats-value">$0.00</span>
+                                </div>
+                                <div class="stats-item">
+                                    <span class="stats-label">Max Supply</span>
+                                    <span id="stat-max-supply" class="stats-value">N/A</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Right Side: Main Chart Area -->
+                    <div class="detail-chart-pane glass-panel">
+                        <div class="chart-header">
+                            <h2>Historical Performance</h2>
+                            <div class="chart-controls">
+                                <button class="time-filter-btn" data-days="1">24h</button>
+                                <button class="time-filter-btn active" data-days="7">7d</button>
+                                <button class="time-filter-btn" data-days="30">30d</button>
+                            </div>
+                        </div>
+                        <div class="chart-container">
+                            <canvas id="priceChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Pipeline Alert Control Center (Always Visible) -->
+            <section class="alert-center-grid">
                 
-                <!-- Dynamic Coin Management -->
-                <section class="controls-card glass-panel admin-card">
-                    <h2>Manage Pipeline Assets</h2>
-                    <p class="card-desc">Add a new CoinGecko token ID and ticker symbol, or stop tracking active coins.</p>
-                    <form id="add-coin-form" class="admin-form">
-                        <input type="text" id="new-coin-id" placeholder="e.g. cardano" required autocomplete="off">
-                        <input type="text" id="new-coin-symbol" placeholder="e.g. ADA" required autocomplete="off">
-                        <button type="submit" class="admin-btn">Add Asset</button>
-                    </form>
+                <!-- Watchlist Monitor Directory -->
+                <div class="glass-panel alert-card">
+                    <div class="card-header-icon">🚨</div>
+                    <h2>Alert Watchlist Monitor</h2>
+                    <p class="card-desc">Active coins being actively monitored by our backend pipeline for volatility anomalies.</p>
                     <div class="active-list-container">
-                        <h3>Active Tracking List</h3>
-                        <ul id="active-coins-list" class="admin-list">
-                            <!-- Populated dynamically -->
-                            <li>Loading active assets...</li>
+                        <ul id="active-watchlist-list" class="admin-list">
+                            <li>Loading alert watchlist...</li>
                         </ul>
                     </div>
-                </section>
-                
-                <!-- Dynamic Subscribers Alerts -->
-                <section class="controls-card glass-panel admin-card">
-                    <h2>Email Alert Directory</h2>
-                    <p class="card-desc">Manage who receives alerts. Enter your email to subscribe or unsubscribe.</p>
+                </div>
+
+                <!-- Mailing List subscriptions -->
+                <div class="glass-panel alert-card">
+                    <div class="card-header-icon">📧</div>
+                    <h2>Alert Notification List</h2>
+                    <p class="card-desc">Subscribed emails will receive TLS-secured SMTP alerts when watchlist assets flag anomalies.</p>
                     <form id="subscribe-form" class="admin-form">
                         <input type="email" id="subscriber-email" placeholder="your.name@gmail.com" required autocomplete="off">
                         <div class="btn-group">
@@ -74,83 +177,44 @@
                         </div>
                     </form>
                     <div class="active-list-container">
-                        <h3>Alert Mailing List</h3>
                         <ul id="subscribers-list" class="admin-list">
-                            <!-- Populated dynamically -->
                             <li>Loading mailing list...</li>
                         </ul>
                     </div>
-                </section>
-                
-            </div>
+                </div>
 
-            <!-- Main Content Area (Right Column) -->
-            <div class="main-content">
-                
-                <!-- Latest Metrics Cards -->
-                <section class="metrics-summary">
-                    <div class="metric-card glass-panel">
-                        <h3>Latest Price</h3>
-                        <div class="metric-value" id="latest-price">$0.00</div>
-                        <div class="metric-meta" id="price-updated">Waiting for data...</div>
-                    </div>
-                    
-                    <div class="metric-card glass-panel">
-                        <h3>Rolling Average (Baseline)</h3>
-                        <div class="metric-value" id="rolling-avg">$0.00</div>
-                        <div class="metric-meta">Computed on last 10 points</div>
-                    </div>
-
-                    <div class="metric-card glass-panel">
-                        <h3>Latest Deviation</h3>
-                        <div class="metric-value" id="latest-deviation">0.00%</div>
-                        <div class="metric-meta" id="deviation-status">Normal range</div>
-                    </div>
-                </section>
-
-                <!-- Chart Panel -->
-                <section class="chart-panel glass-panel">
-                    <div class="chart-header">
-                        <h2>Price Trend & Anomalies</h2>
-                        <div class="chart-legend">
-                            <span class="legend-item"><span class="legend-color normal"></span> Price</span>
-                            <span class="legend-item"><span class="legend-color anomaly"></span> Anomaly Flag</span>
-                        </div>
-                    </div>
-                    <div class="chart-container">
-                        <canvas id="priceChart"></canvas>
-                    </div>
-                </section>
-
-                <!-- Data Table: Recent Logs -->
-                <section class="table-panel glass-panel">
-                    <h2>Data Pipeline Logs (Recent Records)</h2>
-                    <div class="table-scroll">
+                <!-- Watchlist Anomaly Log logs -->
+                <div class="glass-panel alert-card log-span-2">
+                    <div class="card-header-icon">📋</div>
+                    <h2>Watchlist Pipeline Logs</h2>
+                    <p class="card-desc">Live historical logs showing anomaly records saved in our SQLite database.</p>
+                    <div class="table-scroll max-height-logs">
                         <table class="data-table">
                             <thead>
                                 <tr>
+                                    <th>Asset</th>
                                     <th>Timestamp (Local)</th>
                                     <th>Price (USD)</th>
                                     <th>Status</th>
-                                    <th>Type</th>
+                                    <th>Anomaly Type</th>
                                 </tr>
                             </thead>
                             <tbody id="logs-table-body">
                                 <tr>
-                                    <td colspan="4" class="no-data">Loading pipeline history...</td>
+                                    <td colspan="5" class="no-data">Loading pipeline history...</td>
                                 </tr>
                             </tbody>
                         </table>
                     </div>
-                </section>
+                </div>
                 
-            </div>
-
+            </section>
+            
         </main>
         
         <!-- Dashboard Footer -->
         <footer class="app-footer">
-            <p>Crypto Price Tracker Pipeline &copy; 2026. Powered by Python, SQLite, and CoinGecko API.</p>
+            <p>Crypto Price Tracker & Anomaly Detection Pipeline &copy; 2026. Powered by Python, SQLite, FastAPI, and CoinGecko API.</p>
         </footer>
     </div>
 

@@ -35,6 +35,60 @@
             "symbol": "BTC",
             "price": 64040.0,
             "is_anomaly": 0
+        },
+        {
+            "timestamp": "2026-06-22 06:28:17",
+            "symbol": "BTC",
+            "price": 64031.0,
+            "is_anomaly": 0
+        },
+        {
+            "timestamp": "2026-06-22 06:29:08",
+            "symbol": "BTC",
+            "price": 64033.0,
+            "is_anomaly": 0
+        },
+        {
+            "timestamp": "2026-06-22 06:33:18",
+            "symbol": "BTC",
+            "price": 64052.0,
+            "is_anomaly": 0
+        },
+        {
+            "timestamp": "2026-06-22 06:38:19",
+            "symbol": "BTC",
+            "price": 63952.0,
+            "is_anomaly": 0
+        },
+        {
+            "timestamp": "2026-06-22 06:43:21",
+            "symbol": "BTC",
+            "price": 63979.0,
+            "is_anomaly": 0
+        },
+        {
+            "timestamp": "2026-06-22 06:48:21",
+            "symbol": "BTC",
+            "price": 63954.0,
+            "is_anomaly": 0
+        },
+        {
+            "timestamp": "2026-06-22 06:52:28",
+            "symbol": "BTC",
+            "price": 63914.0,
+            "is_anomaly": 0
+        },
+        {
+            "timestamp": "2026-06-22 06:56:47",
+            "symbol": "BTC",
+            "price": 63908.0,
+            "is_anomaly": 0
+        },
+        {
+            "timestamp": "2026-06-22 06:57:29",
+            "symbol": "BTC",
+            "price": 63908.0,
+            "is_anomaly": 0
         }
     ],
     "ethereum": [
@@ -72,6 +126,48 @@
             "timestamp": "2026-06-22 06:24:56",
             "symbol": "ETH",
             "price": 1734.31,
+            "is_anomaly": 0
+        },
+        {
+            "timestamp": "2026-06-22 06:28:17",
+            "symbol": "ETH",
+            "price": 1734.91,
+            "is_anomaly": 0
+        },
+        {
+            "timestamp": "2026-06-22 06:29:08",
+            "symbol": "ETH",
+            "price": 1734.97,
+            "is_anomaly": 0
+        },
+        {
+            "timestamp": "2026-06-22 06:33:18",
+            "symbol": "ETH",
+            "price": 1733.65,
+            "is_anomaly": 0
+        },
+        {
+            "timestamp": "2026-06-22 06:38:19",
+            "symbol": "ETH",
+            "price": 1732.03,
+            "is_anomaly": 0
+        },
+        {
+            "timestamp": "2026-06-22 06:43:21",
+            "symbol": "ETH",
+            "price": 1734.01,
+            "is_anomaly": 0
+        },
+        {
+            "timestamp": "2026-06-22 06:48:21",
+            "symbol": "ETH",
+            "price": 1732.98,
+            "is_anomaly": 0
+        },
+        {
+            "timestamp": "2026-06-22 06:52:28",
+            "symbol": "ETH",
+            "price": 1732.23,
             "is_anomaly": 0
         }
     ],
@@ -111,6 +207,48 @@
             "symbol": "SOL",
             "price": 73.81,
             "is_anomaly": 0
+        },
+        {
+            "timestamp": "2026-06-22 06:28:17",
+            "symbol": "SOL",
+            "price": 73.83,
+            "is_anomaly": 0
+        },
+        {
+            "timestamp": "2026-06-22 06:29:08",
+            "symbol": "SOL",
+            "price": 73.82,
+            "is_anomaly": 0
+        },
+        {
+            "timestamp": "2026-06-22 06:33:18",
+            "symbol": "SOL",
+            "price": 73.72,
+            "is_anomaly": 0
+        },
+        {
+            "timestamp": "2026-06-22 06:38:19",
+            "symbol": "SOL",
+            "price": 73.59,
+            "is_anomaly": 0
+        },
+        {
+            "timestamp": "2026-06-22 06:43:21",
+            "symbol": "SOL",
+            "price": 73.64,
+            "is_anomaly": 0
+        },
+        {
+            "timestamp": "2026-06-22 06:48:21",
+            "symbol": "SOL",
+            "price": 73.63,
+            "is_anomaly": 0
+        },
+        {
+            "timestamp": "2026-06-22 06:52:28",
+            "symbol": "SOL",
+            "price": 73.57,
+            "is_anomaly": 0
         }
     ],
     "cardano": [
@@ -126,6 +264,86 @@
             "timestamp": "2026-06-22 06:24:56",
             "symbol": "TRX",
             "price": 0.328326,
+            "is_anomaly": 0
+        },
+        {
+            "timestamp": "2026-06-22 06:28:17",
+            "symbol": "TRX",
+            "price": 0.32829,
+            "is_anomaly": 0
+        },
+        {
+            "timestamp": "2026-06-22 06:29:08",
+            "symbol": "TRX",
+            "price": 0.328295,
+            "is_anomaly": 0
+        },
+        {
+            "timestamp": "2026-06-22 06:33:18",
+            "symbol": "TRX",
+            "price": 0.328324,
+            "is_anomaly": 0
+        },
+        {
+            "timestamp": "2026-06-22 06:38:19",
+            "symbol": "TRX",
+            "price": 0.328349,
+            "is_anomaly": 0
+        },
+        {
+            "timestamp": "2026-06-22 06:43:21",
+            "symbol": "TRX",
+            "price": 0.328504,
+            "is_anomaly": 0
+        },
+        {
+            "timestamp": "2026-06-22 06:48:21",
+            "symbol": "TRX",
+            "price": 0.328572,
+            "is_anomaly": 0
+        },
+        {
+            "timestamp": "2026-06-22 06:52:28",
+            "symbol": "TRX",
+            "price": 0.328604,
+            "is_anomaly": 0
+        }
+    ],
+    "hyperliquid": [
+        {
+            "timestamp": "2026-06-22 06:29:08",
+            "symbol": "HYPE",
+            "price": 66.21,
+            "is_anomaly": 0
+        },
+        {
+            "timestamp": "2026-06-22 06:33:18",
+            "symbol": "HYPE",
+            "price": 66.18,
+            "is_anomaly": 0
+        },
+        {
+            "timestamp": "2026-06-22 06:38:19",
+            "symbol": "HYPE",
+            "price": 66.14,
+            "is_anomaly": 0
+        },
+        {
+            "timestamp": "2026-06-22 06:43:21",
+            "symbol": "HYPE",
+            "price": 66.15,
+            "is_anomaly": 0
+        },
+        {
+            "timestamp": "2026-06-22 06:48:21",
+            "symbol": "HYPE",
+            "price": 66.08,
+            "is_anomaly": 0
+        },
+        {
+            "timestamp": "2026-06-22 06:52:28",
+            "symbol": "HYPE",
+            "price": 66.09,
             "is_anomaly": 0
         }
     ]

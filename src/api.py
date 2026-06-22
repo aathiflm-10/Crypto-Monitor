@@ -2,6 +2,7 @@ import os
 import sys
 import threading
 import time
+import requests
 import uvicorn
 from fastapi import FastAPI, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
@@ -16,8 +17,8 @@ from main import run_pipeline
 
 app = FastAPI(
     title="Crypto Tracker REST API",
-    description="Backend API serving live price history and supporting dynamic configurations.",
-    version="2.0.0"
+    description="Backend API serving live price history, dynamic explorer, and supporting alert configurations.",
+    version="2.1.0"
 )
 
 # Enable CORS (Cross-Origin Resource Sharing)
@@ -29,11 +30,144 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# 1. API Endpoints: Price Histories
+# --- In-Memory Caching System ---
+# Essential for data engineering robustness to respect free-tier API rate limits.
+market_cache = {
+    "data": None,
+    "timestamp": 0
+}
+chart_cache = {}  # Keys: (coin_id, days) -> {"data": data, "timestamp": timestamp}
+
+# 1. API Endpoints: Market Explorer & Charting Proxy
+@app.get("/api/market")
+def get_market_data():
+    """
+    Fetches the Top 100 cryptocurrencies by market cap with sparklines from CoinGecko.
+    Utilizes an in-memory cache to prevent throttling. Caches data for 2 minutes.
+    """
+    current_time = time.time()
+    
+    # Check if cache is valid (120 seconds)
+    if market_cache["data"] and (current_time - market_cache["timestamp"] < 120):
+        print("[API Cache] Serving market list from memory cache.")
+        return market_cache["data"]
+        
+    url = "https://api.coingecko.com/api/v3/coins/markets"
+    params = {
+        "vs_currency": "usd",
+        "order": "market_cap_desc",
+        "per_page": 100,
+        "page": 1,
+        "sparkline": "true"
+    }
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+    }
+    
+    try:
+        response = requests.get(url, params=params, headers=headers, timeout=12)
+        
+        # Handle HTTP 429 Rate Limit
+        if response.status_code == 429:
+            print("[API] ERROR: Rate limit hit (HTTP 429) fetching market list.")
+            if market_cache["data"]:
+                print("[API Cache] Falling back to expired market cache.")
+                return market_cache["data"]
+            raise HTTPException(
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                detail="CoinGecko rate limit exceeded. Please try again in a few minutes."
+            )
+            
+        response.raise_for_status()
+        data = response.json()
+        
+        # Store in cache
+        market_cache["data"] = data
+        market_cache["timestamp"] = current_time
+        print("[API] Successfully fetched fresh market list from CoinGecko.")
+        return data
+        
+    except requests.exceptions.RequestException as e:
+        print(f"[API] Request exception fetching market list: {e}")
+        # Fallback to cache if available
+        if market_cache["data"]:
+            print("[API Cache] Connection error. Serving fallback expired market cache.")
+            return market_cache["data"]
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to fetch market data: {str(e)}"
+        )
+
+@app.get("/api/market/chart/{coin_id}")
+def get_market_chart(coin_id: str, days: int = 7):
+    """
+    Fetches historical market chart data dynamically for chart rendering.
+    Caches results for 5 minutes. Supports days = 1, 7, 30.
+    """
+    coin_id = coin_id.lower().strip()
+    current_time = time.time()
+    cache_key = (coin_id, days)
+    
+    # Check if cache is valid (300 seconds)
+    if cache_key in chart_cache:
+        cached = chart_cache[cache_key]
+        if current_time - cached["timestamp"] < 300:
+            print(f"[API Cache] Serving chart for {coin_id} ({days}d) from memory cache.")
+            return cached["data"]
+            
+    url = f"https://api.coingecko.com/api/v3/coins/{coin_id}/market_chart"
+    params = {
+        "vs_currency": "usd",
+        "days": str(days)
+    }
+    headers = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+    }
+    
+    try:
+        response = requests.get(url, params=params, headers=headers, timeout=12)
+        
+        if response.status_code == 429:
+            print(f"[API] ERROR: Rate limit hit (HTTP 429) fetching chart for {coin_id}.")
+            if cache_key in chart_cache:
+                print("[API Cache] Serving expired chart cache fallback.")
+                return chart_cache[cache_key]["data"]
+            raise HTTPException(
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                detail="CoinGecko rate limit exceeded. Please try again shortly."
+            )
+            
+        response.raise_for_status()
+        raw_data = response.json()
+        
+        # Convert timestamp, price pairs into a simplified format
+        prices = raw_data.get("prices", [])
+        formatted_prices = [{"time": p[0], "price": p[1]} for p in prices]
+        
+        # Cache results
+        chart_cache[cache_key] = {
+            "data": formatted_prices,
+            "timestamp": current_time
+        }
+        print(f"[API] Successfully fetched fresh chart data for {coin_id} ({days}d).")
+        return formatted_prices
+        
+    except requests.exceptions.RequestException as e:
+        print(f"[API] Request exception fetching chart for {coin_id}: {e}")
+        if cache_key in chart_cache:
+            print("[API Cache] Serving expired chart cache fallback after failure.")
+            return chart_cache[cache_key]["data"]
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to fetch historical chart data: {str(e)}"
+        )
+
+# 2. API Endpoints: Local Pipeline Watchlist Price Histories
 @app.get("/api/prices/{coin_id}")
 def get_prices(coin_id: str, limit: int = 50):
     """
-    Returns the recent price logs for a specific coin from the SQLite database.
+    Returns the recent local pipeline price logs for a specific coin from the SQLite database.
+    Used to display the active watchlist anomaly logs.
     """
     records = database.get_recent_prices(coin_id.lower(), limit=limit)
     if not records:
@@ -49,7 +183,7 @@ def get_prices(coin_id: str, limit: int = 50):
         })
     return formatted_records
 
-# 2. API Endpoints: Coin Management
+# 3. API Endpoints: Watchlist Management
 @app.get("/api/coins")
 def list_coins():
     """
@@ -111,7 +245,7 @@ def delete_coin(coin_id: str):
         )
     return {"message": f"Successfully stopped tracking coin: {coin_id}"}
 
-# 3. API Endpoints: Email Subscribers
+# 4. API Endpoints: Email Subscribers
 @app.get("/api/subscribers")
 def list_subscribers():
     """
@@ -154,7 +288,7 @@ def unsubscribe(email: str):
         )
     return {"message": f"Successfully unsubscribed: {email}"}
 
-# 4. Background Scheduler Daemon Setup
+# 5. Background Scheduler Daemon Setup
 def run_scheduler_loop():
     """
     Loops continuously, running pending scheduled pipeline jobs.
@@ -184,7 +318,7 @@ def startup_event():
     scheduler_thread.start()
     print("[Server] Background scheduler thread successfully spawned.")
 
-# 5. Serve Frontend Web Dashboard
+# 6. Serve Frontend Web Dashboard
 # Mount static files to serve index.html, style.css, app.js at the server root /
 web_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "web")
 app.mount("/", StaticFiles(directory=web_dir, html=True), name="web")
