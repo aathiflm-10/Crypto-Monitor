@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Crypto Price Tracker Pipeline Dashboard</title>
+    <!-- Google Font for sleek, premium typography -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <!-- Chart.js CDN for interactive graphs -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Dashboard Header -->
+        <header class="app-header">
+            <div class="header-left">
+                <div class="logo-icon">📊</div>
+                <div>
+                    <h1>Crypto Pipeline Dashboard</h1>
+                    <p class="subtitle">Real-time Data Engineering Monitor</p>
+                </div>
+            </div>
+            <!-- Pipeline status indicator -->
+            <div class="status-indicator-container">
+                <span class="pulsing-dot"></span>
+                <span class="status-text">Pipeline Active</span>
+            </div>
+        </header>
+
+        <!-- Main Dashboard Metrics -->
+        <main class="dashboard-grid">
+            
+            <!-- Selection Controls -->
+            <section class="controls-card glass-panel">
+                <h2>Tracked Assets</h2>
+                <p class="card-desc">Select a cryptocurrency to view its historical trend and details.</p>
+                <div class="coin-selector-buttons" id="coin-selector">
+                    <button class="selector-btn active" data-coin="bitcoin">
+                        <span class="coin-icon">₿</span> Bitcoin (BTC)
+                    </button>
+                    <button class="selector-btn" data-coin="ethereum">
+                        <span class="coin-icon">Ξ</span> Ethereum (ETH)
+                    </button>
+                    <button class="selector-btn" data-coin="solana">
+                        <span class="coin-icon">☀️</span> Solana (SOL)
+                    </button>
+                </div>
+            </section>
+
+            <!-- Latest Metrics Cards -->
+            <section class="metrics-summary">
+                <div class="metric-card glass-panel">
+                    <h3>Latest Price</h3>
+                    <div class="metric-value" id="latest-price">$0.00</div>
+                    <div class="metric-meta" id="price-updated">Waiting for data...</div>
+                </div>
+                
+                <div class="metric-card glass-panel">
+                    <h3>Rolling Average (Baseline)</h3>
+                    <div class="metric-value" id="rolling-avg">$0.00</div>
+                    <div class="metric-meta">Computed on last 10 points</div>
+                </div>
+
+                <div class="metric-card glass-panel">
+                    <h3>Latest Deviation</h3>
+                    <div class="metric-value" id="latest-deviation">0.00%</div>
+                    <div class="metric-meta" id="deviation-status">Normal range</div>
+                </div>
+            </section>
+
+            <!-- Chart Panel -->
+            <section class="chart-panel glass-panel">
+                <div class="chart-header">
+                    <h2>Price Trend & Anomalies</h2>
+                    <div class="chart-legend">
+                        <span class="legend-item"><span class="legend-color normal"></span> Price</span>
+                        <span class="legend-item"><span class="legend-color anomaly"></span> Anomaly Flag</span>
+                    </div>
+                </div>
+                <div class="chart-container">
+                    <canvas id="priceChart"></canvas>
+                </div>
+            </section>
+
+            <!-- Data Table: Recent Logs -->
+            <section class="table-panel glass-panel">
+                <h2>Data Pipeline Logs (Recent Records)</h2>
+                <div class="table-scroll">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Timestamp (UTC)</th>
+                                <th>Price (USD)</th>
+                                <th>Status</th>
+                                <th>Type</th>
+                            </tr>
+                        </thead>
+                        <tbody id="logs-table-body">
+                            <tr>
+                                <td colspan="4" class="no-data">Loading pipeline history...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+        </main>
+        
+        <!-- Dashboard Footer -->
+        <footer class="app-footer">
+            <p>Crypto Price Tracker Pipeline &copy; 2026. Powered by Python, SQLite, and CoinGecko API.</p>
+        </footer>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
