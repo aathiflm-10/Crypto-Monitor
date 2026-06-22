@@ -17,6 +17,24 @@
             "symbol": "BTC",
             "price": 64160.0,
             "is_anomaly": 0
+        },
+        {
+            "timestamp": "2026-06-22 06:21:53",
+            "symbol": "BTC",
+            "price": 64082.0,
+            "is_anomaly": 0
+        },
+        {
+            "timestamp": "2026-06-22 06:23:58",
+            "symbol": "BTC",
+            "price": 64053.0,
+            "is_anomaly": 0
+        },
+        {
+            "timestamp": "2026-06-22 06:24:56",
+            "symbol": "BTC",
+            "price": 64040.0,
+            "is_anomaly": 0
         }
     ],
     "ethereum": [
@@ -37,6 +55,24 @@
             "symbol": "ETH",
             "price": 1736.57,
             "is_anomaly": 0
+        },
+        {
+            "timestamp": "2026-06-22 06:21:53",
+            "symbol": "ETH",
+            "price": 1735.87,
+            "is_anomaly": 0
+        },
+        {
+            "timestamp": "2026-06-22 06:23:58",
+            "symbol": "ETH",
+            "price": 1734.93,
+            "is_anomaly": 0
+        },
+        {
+            "timestamp": "2026-06-22 06:24:56",
+            "symbol": "ETH",
+            "price": 1734.31,
+            "is_anomaly": 0
         }
     ],
     "solana": [
@@ -56,6 +92,40 @@
             "timestamp": "2026-06-22 05:27:45",
             "symbol": "SOL",
             "price": 73.99,
+            "is_anomaly": 0
+        },
+        {
+            "timestamp": "2026-06-22 06:21:53",
+            "symbol": "SOL",
+            "price": 73.91,
+            "is_anomaly": 0
+        },
+        {
+            "timestamp": "2026-06-22 06:23:58",
+            "symbol": "SOL",
+            "price": 73.83,
+            "is_anomaly": 0
+        },
+        {
+            "timestamp": "2026-06-22 06:24:56",
+            "symbol": "SOL",
+            "price": 73.81,
+            "is_anomaly": 0
+        }
+    ],
+    "cardano": [
+        {
+            "timestamp": "2026-06-22 06:23:58",
+            "symbol": "ADA",
+            "price": 0.159879,
+            "is_anomaly": 0
+        }
+    ],
+    "tron": [
+        {
+            "timestamp": "2026-06-22 06:24:56",
+            "symbol": "TRX",
+            "price": 0.328326,
             "is_anomaly": 0
         }
     ]

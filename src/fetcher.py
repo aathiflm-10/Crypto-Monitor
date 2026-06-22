@@ -1,67 +1,63 @@
 import requests
-
-# CoinGecko API URL for fetching simple prices
-COINGECKO_API_URL = "https://api.coingecko.com/api/v3/simple/price"
-
-# List of target cryptocurrencies to track: (coin_id, coin_symbol)
-TRACKED_COINS = [
-    ("bitcoin", "BTC"),
-    ("ethereum", "ETH"),
-    ("solana", "SOL")
-]
+from database import get_tracked_coins
 
 def fetch_raw_prices():
     """
-    Hits the CoinGecko API and returns a dictionary containing the current
-    prices in USD for all tracked coins.
-    
-    Returns:
-    - dict: A dictionary like {"bitcoin": 64058.0, "ethereum": 1733.13, "solana": 73.79}
-            or None if the request failed.
+    Dynamically queries the database for tracked coins, calls the CoinGecko Simple Price API,
+    and returns a raw dictionary of price values: {'coin_id': price_usd}.
     """
-    # Join all coin IDs into a comma-separated string for the API query parameter
-    coin_ids = ",".join([coin[0] for coin in TRACKED_COINS])
+    # 1. Fetch configured coins from SQLite
+    tracked = get_tracked_coins()
+    if not tracked:
+        print("[Fetcher] WARNING: No coins registered for tracking in database.")
+        return {}
+        
+    # Extract IDs (for the API request) and mapping of ID to symbol
+    coin_ids = [item['coin_id'] for item in tracked]
+    
+    # 2. Configure HTTP API Request
+    url = "https://api.coingecko.com/api/v3/simple/price"
     params = {
-        "ids": coin_ids,
+        "ids": ",".join(coin_ids),
         "vs_currencies": "usd"
     }
     
+    # Set headers to look like a standard browser request (helps prevent HTTP 403/429 blocks)
     headers = {
-        "accept": "application/json",
-        "User-Agent": "CryptoPriceTrackerPipeline/1.0"
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
     }
     
     try:
-        # Make the API request with a 10-second timeout
-        response = requests.get(COINGECKO_API_URL, params=params, headers=headers, timeout=10)
+        # Fetch prices with a timeout of 10 seconds (important for data engineering robustness!)
+        response = requests.get(url, params=params, headers=headers, timeout=10)
+        
+        # Check HTTP Status Code
+        if response.status_code == 429:
+            print("[Fetcher] ERROR: Rate limit hit (HTTP 429). CoinGecko is throttling requests.")
+            return {}
         response.raise_for_status()
+        
         data = response.json()
         
-        # Parse the JSON response into a simple coin_id -> price_usd dictionary
+        # 3. Restructure and return data
         prices = {}
-        for coin_id, coin_symbol in TRACKED_COINS:
-            if coin_id in data:
-                price = data[coin_id].get("usd")
-                if price is not None:
-                    prices[coin_id] = float(price)
-                    
+        for coin_id in coin_ids:
+            if coin_id in data and "usd" in data[coin_id]:
+                prices[coin_id] = float(data[coin_id]["usd"])
+                
+        print(f"[Fetcher] Successfully fetched prices: {prices}")
         return prices
         
-    except requests.exceptions.HTTPError as http_err:
-        if response.status_code == 429:
-            print("[Fetcher] Error 429: Rate limit hit. CoinGecko free API allows only a few requests per minute.")
-        else:
-            print(f"[Fetcher] HTTP error occurred: {http_err}")
-        return None
-    except Exception as e:
-        print(f"[Fetcher] Network or unexpected error: {e}")
-        return None
+    except requests.exceptions.Timeout:
+        print("[Fetcher] ERROR: Request timed out. CoinGecko API is unresponsive.")
+        return {}
+    except requests.exceptions.RequestException as e:
+        print(f"[Fetcher] ERROR: Connection failed: {e}")
+        return {}
 
-# Quick manual test run
 if __name__ == "__main__":
-    print("[Fetcher] Testing raw price fetcher...")
-    prices = fetch_raw_prices()
-    if prices:
-        print(f"[Fetcher] Successfully fetched prices: {prices}")
-    else:
-        print("[Fetcher] Failed to fetch prices.")
+    print("[Fetcher] Testing dynamic price fetcher...")
+    # Initialize database tables and seed values first if running standalone
+    from database import init_db
+    init_db()
+    fetch_raw_prices()

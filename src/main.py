@@ -7,8 +7,8 @@ import os
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 import schedule
-from database import init_db, insert_price, export_prices_to_json
-from fetcher import fetch_raw_prices, TRACKED_COINS
+from database import init_db, insert_price, export_prices_to_json, get_tracked_coins
+from fetcher import fetch_raw_prices
 from detector import check_anomaly
 from notifier import send_alert
 
@@ -31,7 +31,10 @@ def run_pipeline():
         return
         
     # 2. Transformation & Loading: Process each coin individually
-    for coin_id, coin_symbol in TRACKED_COINS:
+    tracked_coins = get_tracked_coins()
+    for item in tracked_coins:
+        coin_id = item['coin_id']
+        coin_symbol = item['coin_symbol']
         if coin_id not in prices:
             print(f"[Pipeline] WARNING: {coin_id} missing from API results.")
             continue

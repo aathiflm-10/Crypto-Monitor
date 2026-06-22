@@ -25,10 +25,10 @@ def get_connection():
 
 def init_db():
     """
-    Creates the 'prices' table in the database if it doesn't already exist.
-    We define schema columns for storing coin metrics and anomaly detection flags.
+    Creates the 'prices', 'tracked_coins', and 'subscribers' tables if they don't exist.
+    Seeds the 'tracked_coins' table with default crypto assets on first boot.
     """
-    create_table_query = """
+    create_prices_table = """
     CREATE TABLE IF NOT EXISTS prices (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         timestamp TEXT NOT NULL,
@@ -40,43 +40,173 @@ def init_db():
     );
     """
     
+    create_tracked_coins_table = """
+    CREATE TABLE IF NOT EXISTS tracked_coins (
+        coin_id TEXT PRIMARY KEY,
+        coin_symbol TEXT NOT NULL
+    );
+    """
+    
+    create_subscribers_table = """
+    CREATE TABLE IF NOT EXISTS subscribers (
+        email TEXT PRIMARY KEY,
+        is_active INTEGER DEFAULT 1
+    );
+    """
+    
     conn = get_connection()
     try:
         cursor = conn.cursor()
-        # Execute the SQL script to create the table
-        cursor.execute(create_table_query)
-        # Commit the transaction to save changes
+        
+        # 1. Create tables
+        cursor.execute(create_prices_table)
+        cursor.execute(create_tracked_coins_table)
+        cursor.execute(create_subscribers_table)
         conn.commit()
-        print("[Database] Successfully initialized database and created 'prices' table.")
+        print("[Database] Initialized tables: prices, tracked_coins, subscribers.")
+        
+        # 2. Seed default coins if table is completely empty
+        cursor.execute("SELECT COUNT(*) FROM tracked_coins;")
+        if cursor.fetchone()[0] == 0:
+            default_coins = [
+                ("bitcoin", "BTC"),
+                ("ethereum", "ETH"),
+                ("solana", "SOL")
+            ]
+            cursor.executemany(
+                "INSERT INTO tracked_coins (coin_id, coin_symbol) VALUES (?, ?);",
+                default_coins
+            )
+            conn.commit()
+            print("[Database] Seeded default tracked coins (Bitcoin, Ethereum, Solana).")
+            
     except sqlite3.Error as e:
         print(f"[Database] Error initializing database: {e}")
     finally:
-        # Always close connections to prevent database locking and free up memory
         conn.close()
+
+# --- Dynamic Configuration Helper Functions ---
+
+def add_tracked_coin(coin_id, coin_symbol):
+    """
+    Adds a new coin to be monitored by the background pipeline.
+    """
+    insert_query = "INSERT OR REPLACE INTO tracked_coins (coin_id, coin_symbol) VALUES (?, ?);"
+    conn = get_connection()
+    try:
+        cursor = conn.cursor()
+        cursor.execute(insert_query, (coin_id.lower(), coin_symbol.upper()))
+        conn.commit()
+        print(f"[Database] Started tracking: {coin_id} ({coin_symbol.upper()})")
+        return True
+    except sqlite3.Error as e:
+        print(f"[Database] Error adding coin: {e}")
+        return False
+    finally:
+        conn.close()
+
+def remove_tracked_coin(coin_id):
+    """
+    Stops monitoring a specific coin and removes it from the configuration.
+    """
+    delete_query = "DELETE FROM tracked_coins WHERE coin_id = ?;"
+    conn = get_connection()
+    try:
+        cursor = conn.cursor()
+        cursor.execute(delete_query, (coin_id.lower(),))
+        conn.commit()
+        print(f"[Database] Stopped tracking: {coin_id}")
+        return True
+    except sqlite3.Error as e:
+        print(f"[Database] Error removing coin: {e}")
+        return False
+    finally:
+        conn.close()
+
+def get_tracked_coins():
+    """
+    Retrieves all coins that are currently being monitored by the pipeline.
+    """
+    select_query = "SELECT coin_id, coin_symbol FROM tracked_coins;"
+    conn = get_connection()
+    try:
+        cursor = conn.cursor()
+        cursor.execute(select_query)
+        rows = cursor.fetchall()
+        return [dict(row) for row in rows]
+    except sqlite3.Error as e:
+        print(f"[Database] Error fetching tracked coins: {e}")
+        return []
+    finally:
+        conn.close()
+
+def subscribe_email(email):
+    """
+    Adds a new email subscriber to receive price anomaly notifications.
+    """
+    insert_query = "INSERT OR REPLACE INTO subscribers (email, is_active) VALUES (?, 1);"
+    conn = get_connection()
+    try:
+        cursor = conn.cursor()
+        cursor.execute(insert_query, (email.lower(),))
+        conn.commit()
+        print(f"[Database] Subscribed email: {email.lower()}")
+        return True
+    except sqlite3.Error as e:
+        print(f"[Database] Error subscribing email: {e}")
+        return False
+    finally:
+        conn.close()
+
+def unsubscribe_email(email):
+    """
+    Removes an email from receiving price anomaly notifications.
+    """
+    delete_query = "DELETE FROM subscribers WHERE email = ?;"
+    conn = get_connection()
+    try:
+        cursor = conn.cursor()
+        cursor.execute(delete_query, (email.lower(),))
+        conn.commit()
+        print(f"[Database] Unsubscribed email: {email.lower()}")
+        return True
+    except sqlite3.Error as e:
+        print(f"[Database] Error unsubscribing email: {e}")
+        return False
+    finally:
+        conn.close()
+
+def get_active_subscribers():
+    """
+    Retrieves a list of all active subscriber email addresses.
+    """
+    select_query = "SELECT email FROM subscribers WHERE is_active = 1;"
+    conn = get_connection()
+    try:
+        cursor = conn.cursor()
+        cursor.execute(select_query)
+        rows = cursor.fetchall()
+        return [row['email'] for row in rows]
+    except sqlite3.Error as e:
+        print(f"[Database] Error fetching subscribers: {e}")
+        return []
+    finally:
+        conn.close()
+
+# --- Core Pipeline Operations ---
 
 def insert_price(coin_id, coin_symbol, price_usd, is_anomaly=0, anomaly_type=None):
     """
     Inserts a new price record into the database.
-    
-    Parameters:
-    - coin_id (str): The unique identifier of the coin (e.g. 'bitcoin')
-    - coin_symbol (str): The ticker symbol (e.g. 'btc')
-    - price_usd (float): The price of the coin in USD
-    - is_anomaly (int): Flag indicating anomaly (0 = Normal, 1 = Anomaly)
-    - anomaly_type (str): Description of anomaly (e.g. 'spike', 'dip', or None)
     """
     insert_query = """
     INSERT INTO prices (timestamp, coin_id, coin_symbol, price_usd, is_anomaly, anomaly_type)
     VALUES (?, ?, ?, ?, ?, ?);
     """
-    
-    # Generate the current UTC timestamp in standard ISO format
     timestamp = datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')
-    
     conn = get_connection()
     try:
         cursor = conn.cursor()
-        # Use parameterized queries (?) to prevent SQL injection and handle formatting safely
         cursor.execute(insert_query, (timestamp, coin_id, coin_symbol.upper(), price_usd, is_anomaly, anomaly_type))
         conn.commit()
         print(f"[Database] Inserted: {coin_id.capitalize()} (${price_usd:,.2f}) at {timestamp}")
@@ -88,7 +218,6 @@ def insert_price(coin_id, coin_symbol, price_usd, is_anomaly=0, anomaly_type=Non
 def get_recent_prices(coin_id, limit=100):
     """
     Fetches the most recent price records for a specific coin.
-    Used for anomaly detection calculations and graph rendering.
     """
     select_query = """
     SELECT timestamp, price_usd, is_anomaly 
@@ -97,13 +226,11 @@ def get_recent_prices(coin_id, limit=100):
     ORDER BY timestamp DESC 
     LIMIT ?;
     """
-    
     conn = get_connection()
     try:
         cursor = conn.cursor()
         cursor.execute(select_query, (coin_id, limit))
         rows = cursor.fetchall()
-        # Convert sqlite3.Row objects to standard Python dictionaries
         return [dict(row) for row in rows]
     except sqlite3.Error as e:
         print(f"[Database] Error fetching recent prices: {e}")
@@ -115,16 +242,10 @@ def export_prices_to_json(limit=100):
     """
     Queries the database for recent prices of all tracked coins and exports
     the structured history to 'prices.json' in both the data and web folders.
-    
-    Parameters:
-    - limit (int): The number of recent records to export per coin.
     """
-    # Define paths for the JSON file
     data_json_path = os.path.join(DB_DIR, "prices.json")
     web_json_path = os.path.join(os.path.dirname(DB_DIR), "web", "prices.json")
     
-    # We query all records, but order by timestamp ascending so charts draw chronologically.
-    # We want to group by coin_id.
     conn = get_connection()
     try:
         cursor = conn.cursor()
@@ -135,7 +256,6 @@ def export_prices_to_json(limit=100):
         
         export_data = {}
         for coin_id in coins:
-            # For each coin, fetch the last N records, order ascending chronologically
             query = """
             SELECT timestamp, coin_symbol, price_usd, is_anomaly 
             FROM prices 
@@ -146,7 +266,6 @@ def export_prices_to_json(limit=100):
             cursor.execute(query, (coin_id, limit))
             rows = cursor.fetchall()
             
-            # Since we fetched sorted DESC (newest first), reverse it for chronological charts
             records = []
             for row in reversed(rows):
                 records.append({
@@ -159,11 +278,10 @@ def export_prices_to_json(limit=100):
             
         # Write to JSON files
         for json_path in [data_json_path, web_json_path]:
-            # Ensure the parent folder exists
             os.makedirs(os.path.dirname(json_path), exist_ok=True)
             with open(json_path, "w") as f:
                 json.dump(export_data, f, indent=4)
-        print(f"[Database] Price history successfully exported to JSON in both data/ and web/ directories.")
+        print(f"[Database] Price history successfully exported to JSON.")
         
     except sqlite3.Error as e:
         print(f"[Database] SQLite error exporting to JSON: {e}")
@@ -172,9 +290,8 @@ def export_prices_to_json(limit=100):
     finally:
         conn.close()
 
-# If you execute this script directly (e.g., `python src/database.py`),
-# it will initialize the database and test JSON export.
 if __name__ == "__main__":
     init_db()
-    # Test JSON export function
-    export_prices_to_json()
+    # Test queries
+    print("Tracked Coins:", get_tracked_coins())
+    print("Active Subscribers:", get_active_subscribers())

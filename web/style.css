@@ -120,26 +120,21 @@ body {
     gap: 20px;
 }
 
+.sidebar-container {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.main-content {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
 @media (min-width: 768px) {
     .dashboard-grid {
-        grid-template-columns: 300px 1fr;
-    }
-    
-    .metrics-summary {
-        grid-column: 1 / -1;
-        display: grid;
-        grid-template-columns: repeat(3, 1fr);
-        gap: 20px;
-    }
-    
-    .chart-panel, .table-panel {
-        grid-column: 2;
-    }
-    
-    .controls-card {
-        grid-column: 1;
-        grid-row: 2 / 4;
-        align-self: start;
+        grid-template-columns: 320px 1fr;
     }
 }
 
@@ -152,21 +147,21 @@ body {
 .card-desc {
     color: var(--text-secondary);
     font-size: 13px;
-    margin-bottom: 20px;
+    margin-bottom: 16px;
     line-height: 1.4;
 }
 
 .coin-selector-buttons {
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 10px;
 }
 
 .selector-btn {
     background: rgba(33, 38, 45, 0.6);
     border: 1px solid var(--border-color);
     color: var(--text-primary);
-    padding: 14px 18px;
+    padding: 12px 16px;
     border-radius: 8px;
     cursor: pointer;
     font-family: var(--font-family);
@@ -195,11 +190,119 @@ body {
     box-shadow: 0 0 12px rgba(88, 166, 255, 0.1);
 }
 
-/* Metric Cards Summary */
-.metrics-summary {
+/* Admin Panels (Inputs & Lists) */
+.admin-card {
+    border-left: 3px solid var(--accent-blue);
+}
+
+.admin-form {
     display: flex;
     flex-direction: column;
+    gap: 10px;
+    margin-bottom: 16px;
+}
+
+.admin-form input {
+    background: rgba(13, 17, 23, 0.8);
+    border: 1px solid var(--border-color);
+    color: var(--text-primary);
+    font-family: var(--font-family);
+    font-size: 13px;
+    padding: 10px 12px;
+    border-radius: 6px;
+    outline: none;
+    transition: border-color 0.2s ease;
+}
+
+.admin-form input:focus {
+    border-color: var(--accent-blue);
+}
+
+.admin-btn {
+    background: var(--accent-blue);
+    border: none;
+    color: #ffffff;
+    font-family: var(--font-family);
+    font-size: 13px;
+    font-weight: 600;
+    padding: 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: filter 0.2s ease;
+}
+
+.admin-btn:hover {
+    filter: brightness(1.15);
+}
+
+.btn-group {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+}
+
+.success-btn {
+    background-color: var(--accent-green);
+}
+
+.danger-btn {
+    background-color: var(--accent-red);
+}
+
+/* Lists Styles inside admin cards */
+.active-list-container h3 {
+    font-size: 13px;
+    text-transform: uppercase;
+    color: var(--text-secondary);
+    letter-spacing: 0.5px;
+    margin-bottom: 8px;
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 4px;
+}
+
+.admin-list {
+    list-style: none;
+    max-height: 120px;
+    overflow-y: auto;
+    font-size: 13px;
+}
+
+.admin-list li {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 6px 8px;
+    border-bottom: 1px dashed rgba(48, 54, 61, 0.4);
+}
+
+.admin-list li:last-child {
+    border-bottom: none;
+}
+
+.delete-btn {
+    background: transparent;
+    border: none;
+    color: var(--text-secondary);
+    cursor: pointer;
+    font-size: 12px;
+    transition: color 0.2s ease;
+}
+
+.delete-btn:hover {
+    color: var(--accent-red);
+}
+
+/* Metric Cards Summary */
+.metrics-summary {
+    display: grid;
+    grid-template-columns: 1fr;
     gap: 16px;
+}
+
+@media (min-width: 576px) {
+    .metrics-summary {
+        grid-template-columns: repeat(3, 1fr);
+    }
 }
 
 .metric-card {

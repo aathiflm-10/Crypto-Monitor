@@ -31,79 +31,120 @@
         <!-- Main Dashboard Metrics -->
         <main class="dashboard-grid">
             
-            <!-- Selection Controls -->
-            <section class="controls-card glass-panel">
-                <h2>Tracked Assets</h2>
-                <p class="card-desc">Select a cryptocurrency to view its historical trend and details.</p>
-                <div class="coin-selector-buttons" id="coin-selector">
-                    <button class="selector-btn active" data-coin="bitcoin">
-                        <span class="coin-icon">₿</span> Bitcoin (BTC)
-                    </button>
-                    <button class="selector-btn" data-coin="ethereum">
-                        <span class="coin-icon">Ξ</span> Ethereum (ETH)
-                    </button>
-                    <button class="selector-btn" data-coin="solana">
-                        <span class="coin-icon">☀️</span> Solana (SOL)
-                    </button>
-                </div>
-            </section>
-
-            <!-- Latest Metrics Cards -->
-            <section class="metrics-summary">
-                <div class="metric-card glass-panel">
-                    <h3>Latest Price</h3>
-                    <div class="metric-value" id="latest-price">$0.00</div>
-                    <div class="metric-meta" id="price-updated">Waiting for data...</div>
-                </div>
+            <!-- Left Side Controls Panel -->
+            <div class="sidebar-container">
                 
-                <div class="metric-card glass-panel">
-                    <h3>Rolling Average (Baseline)</h3>
-                    <div class="metric-value" id="rolling-avg">$0.00</div>
-                    <div class="metric-meta">Computed on last 10 points</div>
-                </div>
-
-                <div class="metric-card glass-panel">
-                    <h3>Latest Deviation</h3>
-                    <div class="metric-value" id="latest-deviation">0.00%</div>
-                    <div class="metric-meta" id="deviation-status">Normal range</div>
-                </div>
-            </section>
-
-            <!-- Chart Panel -->
-            <section class="chart-panel glass-panel">
-                <div class="chart-header">
-                    <h2>Price Trend & Anomalies</h2>
-                    <div class="chart-legend">
-                        <span class="legend-item"><span class="legend-color normal"></span> Price</span>
-                        <span class="legend-item"><span class="legend-color anomaly"></span> Anomaly Flag</span>
+                <!-- Selection Controls -->
+                <section class="controls-card glass-panel">
+                    <h2>Tracked Assets</h2>
+                    <p class="card-desc">Select a cryptocurrency to view its historical trend and details.</p>
+                    <div class="coin-selector-buttons" id="coin-selector">
+                        <!-- Dynamically generated buttons -->
+                        <div class="no-data">Loading selector...</div>
                     </div>
-                </div>
-                <div class="chart-container">
-                    <canvas id="priceChart"></canvas>
-                </div>
-            </section>
+                </section>
+                
+                <!-- Dynamic Coin Management -->
+                <section class="controls-card glass-panel admin-card">
+                    <h2>Manage Pipeline Assets</h2>
+                    <p class="card-desc">Add a new CoinGecko token ID and ticker symbol, or stop tracking active coins.</p>
+                    <form id="add-coin-form" class="admin-form">
+                        <input type="text" id="new-coin-id" placeholder="e.g. cardano" required autocomplete="off">
+                        <input type="text" id="new-coin-symbol" placeholder="e.g. ADA" required autocomplete="off">
+                        <button type="submit" class="admin-btn">Add Asset</button>
+                    </form>
+                    <div class="active-list-container">
+                        <h3>Active Tracking List</h3>
+                        <ul id="active-coins-list" class="admin-list">
+                            <!-- Populated dynamically -->
+                            <li>Loading active assets...</li>
+                        </ul>
+                    </div>
+                </section>
+                
+                <!-- Dynamic Subscribers Alerts -->
+                <section class="controls-card glass-panel admin-card">
+                    <h2>Email Alert Directory</h2>
+                    <p class="card-desc">Manage who receives alerts. Enter your email to subscribe or unsubscribe.</p>
+                    <form id="subscribe-form" class="admin-form">
+                        <input type="email" id="subscriber-email" placeholder="your.name@gmail.com" required autocomplete="off">
+                        <div class="btn-group">
+                            <button type="submit" class="admin-btn success-btn">Subscribe</button>
+                            <button type="button" id="unsubscribe-btn" class="admin-btn danger-btn">Unsubscribe</button>
+                        </div>
+                    </form>
+                    <div class="active-list-container">
+                        <h3>Alert Mailing List</h3>
+                        <ul id="subscribers-list" class="admin-list">
+                            <!-- Populated dynamically -->
+                            <li>Loading mailing list...</li>
+                        </ul>
+                    </div>
+                </section>
+                
+            </div>
 
-            <!-- Data Table: Recent Logs -->
-            <section class="table-panel glass-panel">
-                <h2>Data Pipeline Logs (Recent Records)</h2>
-                <div class="table-scroll">
-                    <table class="data-table">
-                        <thead>
-                            <tr>
-                                <th>Timestamp (UTC)</th>
-                                <th>Price (USD)</th>
-                                <th>Status</th>
-                                <th>Type</th>
-                            </tr>
-                        </thead>
-                        <tbody id="logs-table-body">
-                            <tr>
-                                <td colspan="4" class="no-data">Loading pipeline history...</td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-            </section>
+            <!-- Main Content Area (Right Column) -->
+            <div class="main-content">
+                
+                <!-- Latest Metrics Cards -->
+                <section class="metrics-summary">
+                    <div class="metric-card glass-panel">
+                        <h3>Latest Price</h3>
+                        <div class="metric-value" id="latest-price">$0.00</div>
+                        <div class="metric-meta" id="price-updated">Waiting for data...</div>
+                    </div>
+                    
+                    <div class="metric-card glass-panel">
+                        <h3>Rolling Average (Baseline)</h3>
+                        <div class="metric-value" id="rolling-avg">$0.00</div>
+                        <div class="metric-meta">Computed on last 10 points</div>
+                    </div>
+
+                    <div class="metric-card glass-panel">
+                        <h3>Latest Deviation</h3>
+                        <div class="metric-value" id="latest-deviation">0.00%</div>
+                        <div class="metric-meta" id="deviation-status">Normal range</div>
+                    </div>
+                </section>
+
+                <!-- Chart Panel -->
+                <section class="chart-panel glass-panel">
+                    <div class="chart-header">
+                        <h2>Price Trend & Anomalies</h2>
+                        <div class="chart-legend">
+                            <span class="legend-item"><span class="legend-color normal"></span> Price</span>
+                            <span class="legend-item"><span class="legend-color anomaly"></span> Anomaly Flag</span>
+                        </div>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="priceChart"></canvas>
+                    </div>
+                </section>
+
+                <!-- Data Table: Recent Logs -->
+                <section class="table-panel glass-panel">
+                    <h2>Data Pipeline Logs (Recent Records)</h2>
+                    <div class="table-scroll">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Timestamp (Local)</th>
+                                    <th>Price (USD)</th>
+                                    <th>Status</th>
+                                    <th>Type</th>
+                                </tr>
+                            </thead>
+                            <tbody id="logs-table-body">
+                                <tr>
+                                    <td colspan="4" class="no-data">Loading pipeline history...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+                
+            </div>
 
         </main>
         
