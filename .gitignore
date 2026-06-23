@@ -1,3 +1,6 @@
+# Project Documentation (local only — never push to GitHub)
+Docs/
+
 # Python Virtual Environments
 venv/
 ENV/
